@@ -331,7 +331,7 @@ def writeStockData():
 
 # store stock data to mysql database (not necessary)
 def storeStockData():
-	# mysql username and password should be changed to the user's own
+    # mysql username and password should be changed to the user's own
     name = "xxx"
     password = "xxx"
     try:
