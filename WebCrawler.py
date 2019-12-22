@@ -332,8 +332,8 @@ def writeStockData():
 # store stock data to mysql database (not necessary)
 def storeStockData():
 	# mysql username and password should be changed to the user's own
-    name = "root"
-    password = "WLX643204"
+    name = "xxx"
+    password = "xxx"
     try:
         pymysql.connect("localhost", name, password)
     except:
