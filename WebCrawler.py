@@ -24,7 +24,7 @@ def getArticleUrl(url, hrefs):
     i = 0
     while i < 3:
         try:
-            html = requests.get(url)
+            html = requests.get(url, timeout=5)
             soup = BeautifulSoup(html.content, 'lxml')
             for item in soup.select("p.title a"):
                 href = item.get("href")
@@ -44,10 +44,11 @@ def getArticleContent(url):
     global articleCnt
     global failArticleUrl
     hasTime = False
+    hasDiscuss = False
     i = 0
     while i < 3:
         try:
-            html = requests.get(url)
+            html = requests.get(url, timeout=5)
             soup = BeautifulSoup(html.content, 'lxml')
             # if there is no content in this page, just return and skip this url
             if len(soup.select("#ContentBody > p")) == 0:
@@ -57,6 +58,10 @@ def getArticleContent(url):
             if len(soup.select(".time")) != 0:
                 time = soup.select(".time")[0].get_text()
                 hasTime = True
+            # if there is discuss number in this page, crawl and write it to file
+            if len(soup.select("span.num.ml5")) != 0:
+                discussNum = soup.select("span.num.ml5")[0].get_text()
+                hasDiscuss = True
             # get the file name from the url
             fileName = "CrawlData//ArticleData//" + url[-23:-5] + ".txt"
             articleCnt += 1
@@ -69,6 +74,9 @@ def getArticleContent(url):
                 # write article content to file
                 for item in soup.select("#ContentBody > p"):
                     f.write(item.get_text() + '\n')
+                # write discuss number to file
+                if hasDiscuss == True:
+                    f.write(discussNum + "人参与讨论" + '\n')
                 print("Write: " + title)
             # store article url to a file
             with open("CrawlData//ArticleUrl.txt", 'a+', encoding="utf-8") as f:
@@ -137,23 +145,26 @@ def writeArticleData():
 # get image urls from each article's page
 def getImageUrl(url, imageUrls):
     global failImagePageUrl
+    global allImageUrl
     # only crawl three types of images for simplicity
     imageType = [".jpg", ".png", ".gif"]
     i = 0
     while i < 3:
         try:
-            html = requests.get(url)
+            html = requests.get(url, timeout=5)
             soup = BeautifulSoup(html.content, 'lxml')
             images = soup.find_all('img')
             for image in images:
                 imageUrl = image.get('src')
-                # many images may be redundant, so check if imageUrl is already in allImageUrl
-                if (imageUrl[-4:] in imageType) and (imageUrl not in allImageUrl):
+                # many images may be redundant, so check if imageUrl is already in imageUrls or allImageUrl
+                if (imageUrl[-4:] in imageType) and (imageUrl not in imageUrls) and (imageUrl not in allImageUrl):
                     if imageUrl[0:4] == "http":
                         imageUrls.append(imageUrl)
+                        allImageUrl.append(imageUrl)
                     # some urls may not have host names, so add it
                     else:
                         imageUrls.append("https:" + imageUrl)
+                        allImageUrl.append("https:" + imageUrl)
             return
         except requests.exceptions.RequestException as e:
             print("Connection timeout, retry...")
@@ -199,7 +210,7 @@ def writeImageData():
         if len(imageUrls) == 0:
             print("Connection failed, skip this url.")
             continue
-        allImageUrl.extend(imageUrls)
+        imageUrls = list(set(imageUrls))
         for imageUrl in imageUrls:
             getImageContent(imageUrl)
         print("Download images on %s, %d" % (url, cnt))
@@ -231,7 +242,7 @@ def getHtml(paraStr1, paraStr2, pageNum):
     i = 0
     while i < 3:
         try:
-            r = requests.get(url)   # GET method
+            r = requests.get(url, timeout=5)   # GET method
             regex1 = "\[(.*?)\]"
             regex2 = "{(.*?)}"
             allData = re.compile(regex1, re.S).findall(r.text)
@@ -331,9 +342,9 @@ def writeStockData():
 
 # store stock data to mysql database (not necessary)
 def storeStockData():
-    # mysql username and password should be changed to the user's own
-    name = "xxx"
-    password = "xxx"
+	# mysql username and password should be changed to the user's own
+    name = "root"
+    password = "WLX643204"
     try:
         pymysql.connect("localhost", name, password)
     except:
